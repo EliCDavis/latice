@@ -1,31 +1,42 @@
 import time
 from sonar import Sonar
+from gpiozero import OutputDevice, InputDevice
 
-RIGHT_TRIGGER = 17
-RIGHT_ECHO = 27
+ECHO = InputDevice(26)
 
-MIDDLE_TRIGGER = 10
-MIDDLE_ECHO = 9
+RIGHT_TRIGGER = OutputDevice(22)
+MIDDLE_TRIGGER = OutputDevice(27)
+LEFT_TRIGGER = OutputDevice(17)
 
-LEFT_TRIGGER = 5
-LEFT_ECHO = 6
+# Using datasheet at: https://cdn.sparkfun.com/datasheets/Sensors/Proximity/HCSR04.pdf
+# "we suggest to use over 60ms measurement cycle, in order to prevent trigger
+# signal to the echo signal".. whatever that means
+READING_TIMEOUT_MS = 61
 
-READING_TIMEOUT_MS = 200
+
+def distance_display(sonar):
+    dist = sonar.distance()
+    if dist == -666:
+        return "?"
+    else:
+        return "%.1f cm" % dist
+
 
 if __name__ == '__main__':
 
-    left_sonar = Sonar(LEFT_TRIGGER, LEFT_ECHO, READING_TIMEOUT_MS)
-    middle_sonar = Sonar(MIDDLE_TRIGGER, MIDDLE_ECHO, READING_TIMEOUT_MS)
-    right_sonar = Sonar(RIGHT_TRIGGER, RIGHT_ECHO, READING_TIMEOUT_MS)
+    left_sonar = Sonar(LEFT_TRIGGER, ECHO, READING_TIMEOUT_MS)
+    middle_sonar = Sonar(MIDDLE_TRIGGER, ECHO, READING_TIMEOUT_MS)
+    right_sonar = Sonar(RIGHT_TRIGGER, ECHO, READING_TIMEOUT_MS)
 
     try:
         while True:
-            l_dist = left_sonar.distance()
-            m_dist = middle_sonar.distance()
-            r_dist = right_sonar.distance()
-
-            print("left: %.1f cm; middle: %.1f cm; right: %.1f cm; " % (l_dist, m_dist, r_dist))
+            print("left: %s; middle: %s; right: %s;" %
+                  (distance_display(left_sonar), distance_display(middle_sonar), distance_display(right_sonar)))
             time.sleep(1)
 
     except KeyboardInterrupt:
+        ECHO.close()
+        LEFT_TRIGGER.close()
+        MIDDLE_TRIGGER.close()
+        RIGHT_TRIGGER.close()
         print("Measurement stopped by User")
