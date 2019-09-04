@@ -29,6 +29,6 @@ class ProximityBlinkingController(LightController):
             else:
                 direction = 1 if new_values[pwm_val_index] > self._pwm_values[pwm_val_index] else -1
                 self._pwm_values[pwm_val_index] = self._pwm_values[pwm_val_index] + (self.__movement_speed * delta_time * direction)
-            self._pwm_values[pwm_val_index] = 0.06
+            
         self.__last_time = new_time
         return self._pwm_values

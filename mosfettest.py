@@ -1,28 +1,37 @@
 import time
 from gpiozero import PWMOutputDevice
 import math
+import sys
 
-LED_PINS = [5, 6, 13, 19, 26, 16, 20, 21]
+# LED_PINS = [13, 6, 5, 19, 26, 16, 20, 21]
 
-#OUT = 5
+LED_PINS = [16, 6, 5, 26, 6, 13, 19, 5]
+
 
 if __name__ == '__main__':
-    #pin_out = PWMOutputDevice(OUT)
 
     OUTS = []
     for pin in LED_PINS:
         OUTS.append(PWMOutputDevice(pin))
-    # pin_out.on()
-    # time.sleep(2)
-    # pin_out.off()
-    #pin_out.blink(3, 3, 1, True)
+
 
     try:
-        while True:
-            time.sleep(.01)
-            #pin_out.value = .888
+        # while True:
+            # time.sleep(.01)
 
-            for i in range(len(OUTS)):
-                OUTS[i].value = .888 * abs(math.sin(time.time() + (float(i)*.170)))
+            # for i in range(len(OUTS)):
+                # OUTS[i].value = .888 * abs(math.sin(time.time() + (float(i)*.170)))
+
+        i = 0
+        while True:
+            OUTS[i].value = .888
+            val = raw_input()
+            i = (i + 1) % len(LED_PINS)
+            print(i)
+            print("next")
+
+
     except KeyboardInterrupt:
         print("Stopping")
+        for i in range(len(OUTS)):
+                OUTS[i].close()

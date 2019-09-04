@@ -3,11 +3,12 @@ from sonar import Sonar
 from gpiozero import OutputDevice, InputDevice, PWMOutputDevice
 from proximity_blinking_controller import ProximityBlinkingController
 import threading
+from math import sqrt
 
 ECHO = InputDevice(18)
 RIGHT_TRIGGER = OutputDevice(17)
-MIDDLE_TRIGGER = OutputDevice(22)
-LEFT_TRIGGER = OutputDevice(27)
+MIDDLE_TRIGGER = OutputDevice(27)
+LEFT_TRIGGER = OutputDevice(22)
 
 LED_PINS = [5, 6, 13, 19, 26, 16, 20, 21]
 light_controller = ProximityBlinkingController(len(LED_PINS), 0.3, 200.0)
@@ -17,7 +18,7 @@ light_controller = ProximityBlinkingController(len(LED_PINS), 0.3, 200.0)
 # signal to the echo signal".. whatever that means
 READING_TIMEOUT_MS = 61
 
-LED_CHANGE_RATE = .1
+LED_CHANGE_RATE = .001
 
 
 def distance_display(dist):
@@ -33,7 +34,10 @@ def light_controller_driver_thread():
     while True:
         pwms = light_controller.get_pwm_values(time.time())
         for i in range(len(pwms)):
-            LED_OUT[i].value = pwms[i]
+            if pwms[i] < .1:
+                LED_OUT[i].value = 0
+            else:
+                LED_OUT[i].value = sqrt(pwms[i]-.1)
         time.sleep(LED_CHANGE_RATE)
         if stop_light_driver_thread:
             break
@@ -72,4 +76,6 @@ if __name__ == '__main__':
         MIDDLE_TRIGGER.close()
         RIGHT_TRIGGER.close()
         stop_light_driver_thread = True
+        for i in range(len(LED_OUT)):
+                LED_OUT[i].close()
         print("Measurement stopped by User")
