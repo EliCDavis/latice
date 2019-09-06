@@ -29,28 +29,27 @@ class LightController:
             # if we meet an index exactly (check if this is proper for python)
             if accumlative_sensor_index.is_integer():
                 dist = distance_readings[int(floor(accumlative_sensor_index)) - 1]
-                if dist == -666:
+                if dist == -666 or dist > max_distance:
                     pwms[light_index] = 0
                 else: 
                     pwms[light_index] = (1.0 - (dist / max_distance))
 
             elif floor(accumlative_sensor_index) != floor(light_index * sensors_per_light):
                 oneIndex = int(floor(accumlative_sensor_index)) - 1
-                dist1 = 0
-                if distance_readings[oneIndex] != -666:
-                    dist1 = distance_readings[oneIndex]
+                pwm1 = 0
+                if distance_readings[oneIndex] != -666 and distance_readings[oneIndex] < max_distance:
+                    pwm1 = 1.0 - (distance_readings[oneIndex] / max_distance)
 
                 twoIndex = int(floor(accumlative_sensor_index))
-                dist2 = 0
-                if distance_readings[twoIndex] != -666:
-                    dist2 = distance_readings[twoIndex]
+                pwm2 = 0
+                if distance_readings[twoIndex] != -666 and distance_readings[twoIndex] < max_distance:
+                    pwm2 = 1.0 - (distance_readings[twoIndex] / max_distance)
 
-                dist = (dist1 + dist2) * .5
 
-                pwms[light_index] = 1.0 - (dist / max_distance)
+                pwms[light_index] = (pwm1 + pwm2) * 0.5
             else:
                 dist = distance_readings[int(floor(accumlative_sensor_index))]
-                if dist == -666:
+                if dist == -666 or dist > max_distance:
                     pwms[light_index] = 0
                 else:
                     pwms[light_index] = 1.0 - (dist / max_distance)

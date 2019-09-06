@@ -10,7 +10,7 @@ RIGHT_TRIGGER = OutputDevice(17)
 MIDDLE_TRIGGER = OutputDevice(27)
 LEFT_TRIGGER = OutputDevice(22)
 
-LED_PINS = [5, 6, 13, 19, 26, 16, 20, 21]
+LED_PINS = [16, 20, 21, 26, 6, 13, 19, 5]
 light_controller = ProximityBlinkingController(len(LED_PINS), 0.3, 200.0)
 
 # Using datasheet at: https://cdn.sparkfun.com/datasheets/Sensors/Proximity/HCSR04.pdf
@@ -40,6 +40,8 @@ def light_controller_driver_thread():
                 LED_OUT[i].value = sqrt(pwms[i]-.1)
         time.sleep(LED_CHANGE_RATE)
         if stop_light_driver_thread:
+            for i in range(len(LED_OUT)):
+                LED_OUT[i].close()
             break
 
 
@@ -60,13 +62,18 @@ if __name__ == '__main__':
     try:
         while True:
             left_dist = left_sonar.distance()
+            time.sleep(.100)
             middle_dist = middle_sonar.distance()
+            time.sleep(.100)
             right_dist = right_sonar.distance()
+            time.sleep(.100)
             print("left: %s; middle: %s; right: %s;" %
                   (distance_display(left_dist), distance_display(middle_dist), distance_display(right_dist)))
 
             light_controller.set_sensor_values(
                 [left_dist, middle_dist, right_dist])
+
+            # light_controller.set_sensor_values([100, 300, 300])
 
             time.sleep(1)
 
@@ -76,6 +83,4 @@ if __name__ == '__main__':
         MIDDLE_TRIGGER.close()
         RIGHT_TRIGGER.close()
         stop_light_driver_thread = True
-        for i in range(len(LED_OUT)):
-                LED_OUT[i].close()
         print("Measurement stopped by User")
