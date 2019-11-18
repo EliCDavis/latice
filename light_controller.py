@@ -45,7 +45,6 @@ class LightController:
                 if distance_readings[twoIndex] != -666 and distance_readings[twoIndex] < max_distance:
                     pwm2 = 1.0 - (distance_readings[twoIndex] / max_distance)
 
-
                 pwms[light_index] = (pwm1 + pwm2) * 0.5
             else:
                 dist = distance_readings[int(floor(accumlative_sensor_index))]

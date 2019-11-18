@@ -1,3 +1,3 @@
 # Latice
 
-Raspberry Pi project that pretty much just turns on and off LEDs when I think about it... o_o
+Raspberry Pi project that animates lights to look like fire flys as a user approaches the device.

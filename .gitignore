@@ -1,3 +1,9 @@
 .vscode
 
 *.pyc
+
+*.jpg
+
+*.h264
+
+*.mp4

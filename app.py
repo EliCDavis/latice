@@ -4,6 +4,10 @@ from gpiozero import OutputDevice, InputDevice, PWMOutputDevice
 from proximity_blinking_controller import ProximityBlinkingController
 import threading
 from math import sqrt
+import os
+
+from telegram.ext import Updater
+updater = Updater(token=os.environ['TELEGRAM_TOKEN'])
 
 ECHO = InputDevice(18)
 RIGHT_TRIGGER = OutputDevice(17)
@@ -11,7 +15,12 @@ MIDDLE_TRIGGER = OutputDevice(27)
 LEFT_TRIGGER = OutputDevice(22)
 
 LED_PINS = [16, 20, 21, 26, 6, 13, 19, 5]
-light_controller = ProximityBlinkingController(len(LED_PINS), 0.3, 200.0)
+
+currentControl = "proximity"
+
+controllers = {
+    "proximity": ProximityBlinkingController(len(LED_PINS), 0.3, 200.0)
+}
 
 # Using datasheet at: https://cdn.sparkfun.com/datasheets/Sensors/Proximity/HCSR04.pdf
 # "we suggest to use over 60ms measurement cycle, in order to prevent trigger
@@ -32,7 +41,14 @@ stop_light_driver_thread = False
 
 def light_controller_driver_thread():
     while True:
-        pwms = light_controller.get_pwm_values(time.time())
+
+        pwms = []
+        for controllerKey in controllers:
+            if controllerKey == currentControl:
+                pwms = controllers[controllerKey].get_pwm_values(time.time())
+            else:
+                controllers[controllerKey].get_pwm_values(time.time())
+        
         for i in range(len(pwms)):
             if pwms[i] < .1:
                 LED_OUT[i].value = 0
@@ -70,10 +86,9 @@ if __name__ == '__main__':
             print("left: %s; middle: %s; right: %s;" %
                   (distance_display(left_dist), distance_display(middle_dist), distance_display(right_dist)))
 
-            light_controller.set_sensor_values(
-                [left_dist, middle_dist, right_dist])
-
-            # light_controller.set_sensor_values([100, 300, 300])
+            for controllerKey in controllers:
+                controllers[controllerKey].set_sensor_values(
+                    [left_dist, middle_dist, right_dist])
 
             time.sleep(1)
 
