@@ -13,6 +13,6 @@ class TwinkleController(LightController):
         new_values = []
 
         for i in range(len(self._pwm_values)):
-            new_values.append( .888 * abs(sin(new_time + (float(i)*.170)))) 
+            new_values.append( .888 * abs(sin((new_time*self.__movement_speed) + (float(i)*.170)))) 
 
         return new_values

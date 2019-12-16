@@ -3,9 +3,12 @@ from sonar import Sonar
 from gpiozero import OutputDevice, InputDevice, PWMOutputDevice
 from proximity_blinking_controller import ProximityBlinkingController
 from twinkle_controller import TwinkleController
+from sleep_controller import SleepController
+from security_controller import SecurityController
 import threading
 from math import sqrt
 import os
+from picamera import PiCamera
 
 import teletest
 
@@ -19,12 +22,20 @@ LEFT_TRIGGER = OutputDevice(22)
 
 LED_PINS = [16, 20, 21, 26, 6, 13, 19, 5]
 
-currentControl = "proximity"
+camera = PiCamera()
+cameraMutex = threading.Lock()
+
+updater = Updater(token=os.environ['TELEGRAM_TOKEN'], use_context=True)
+
 
 controllers = {
-    "proximity": ProximityBlinkingController(len(LED_PINS), 0.3, 200.0),
-    "twinkle": TwinkleController(len(LED_PINS), 0.3)
+    "bugs": ProximityBlinkingController(len(LED_PINS), 0.3, 200.0),
+    "twinkle": TwinkleController(len(LED_PINS), 0.8),
+    "security": SecurityController(len(LED_PINS), camera, cameraMutex, 100.0, updater.bot, -390904930),
+    "sleep": SleepController(len(LED_PINS))
 }
+currentControl = "bugs"
+
 
 # Using datasheet at: https://cdn.sparkfun.com/datasheets/Sensors/Proximity/HCSR04.pdf
 # "we suggest to use over 60ms measurement cycle, in order to prevent trigger
@@ -49,23 +60,58 @@ def light_controller_driver_thread():
         for controllerKey in controllers:
             if controllerKey == currentControl:
                 pwms = controllers[controllerKey].get_pwm_values(time.time())
-            else:
-                # run all the other controllers to make sure their keeping up
-                # with their delta times properly
-                controllers[controllerKey].get_pwm_values(time.time())
         
         for i in range(len(pwms)):
-            if pwms[i] < .1:
-                LED_OUT[i].value = 0
-            else:
-                # LED_OUT[i].value = sqrt(pwms[i]-.1)
-                LED_OUT[i].value = pwms[i]
+            LED_OUT[i].value = pwms[i]
 
         time.sleep(LED_CHANGE_RATE)
         if stop_light_driver_thread:
             for i in range(len(LED_OUT)):
                 LED_OUT[i].close()
             break
+
+
+def capture_picture_command(update, context):
+    if teletest.should_respond(update, context) == False:
+        return
+
+    print(update.effective_chat.id)
+    cameraMutex.acquire()
+    try:
+        camera.capture('./image.jpg')
+    finally:
+        cameraMutex.release()
+        
+    print('took picture')
+    context.bot.send_photo(
+        chat_id=update.effective_chat.id,
+        photo=open('./image.jpg', 'rb')
+    )
+
+def capture_video_command(update, context):
+    if teletest.should_respond(update, context) == False:
+        return
+        
+    cameraMutex.acquire()
+    try:
+        print("starting recording")
+        # camera.start_preview()
+        camera.start_recording('./video.h264')
+        time.sleep(5)
+        camera.stop_recording()
+    finally:
+        cameraMutex.release()
+
+    # camera.stop_preview()
+    print('took video')
+    os.system('MP4Box -add video.h264 video.mp4')
+    context.bot.send_video(
+        chat_id=update.effective_chat.id,
+        video=open('./video.mp4', 'rb')
+    )
+
+    os.remove("video.h264")
+    os.remove("video.mp4")
 
 
 def set_mode_command(update, context):
@@ -76,26 +122,12 @@ def set_mode_command(update, context):
     command = teletest.remove_prefix(update.message.text, "/mode")
     return_message = "Unrecognized command"
 
-    if command == "twinkle":
-        print("Setting mode to twinkle")
-        return_message = "Setting mode to twinkle"
-        currentControl = "twinkle"
-
-    elif command == "sleep":
-        print("Setting mode to sleep")
-        return_message = "Setting mode to sleep"
-
-    elif command == "bug":
-        print("Setting mode to lightning bug")
-        return_message = "Setting mode to lightning bug"
-        currentControl = "proximity"
-
-    elif command == "security":
-        print("Setting mode to security")
-        return_message = "Setting mode to security"
-        
-    elif command == "":
-        return_message = "Please Specify a mode [twinkle | bug | security | sleep]"
+    if command == "":
+        return_message = "Current mode: " + str(currentControl) + ". All modes: " + str(controllers.keys())
+    elif controllers.has_key(command): 
+        print("Setting mode to " + command)
+        return_message = "Setting mode to " + command
+        currentControl = command
     else:
         print("Unrecognized command")
 
@@ -106,10 +138,9 @@ def set_mode_command(update, context):
 
 
 def bot_driver_thread():
-    updater = Updater(token=os.environ['TELEGRAM_TOKEN'], use_context=True)
     
-    updater.dispatcher.add_handler(CommandHandler('picture', teletest.capture_picture_command))
-    updater.dispatcher.add_handler(CommandHandler('video', teletest.capture_video_command))
+    updater.dispatcher.add_handler(CommandHandler('picture', capture_picture_command))
+    updater.dispatcher.add_handler(CommandHandler('video', capture_video_command))
     updater.dispatcher.add_handler(CommandHandler('mode', set_mode_command))
 
     updater.start_polling()

@@ -1,4 +1,4 @@
-from math import sin
+from math import sin, sqrt
 from light_controller import LightController
 
 
@@ -30,5 +30,12 @@ class ProximityBlinkingController(LightController):
                 direction = 1 if new_values[pwm_val_index] > self._pwm_values[pwm_val_index] else -1
                 self._pwm_values[pwm_val_index] = self._pwm_values[pwm_val_index] + (self.__movement_speed * delta_time * direction)
             
+
+        for i in range(len(new_values)):
+            if new_values[i] < .1:
+                new_values[i] = 0
+            else:
+                new_values[i] = min(sqrt(new_values[i]-.1), 1)
+
         self.__last_time = new_time
         return self._pwm_values
